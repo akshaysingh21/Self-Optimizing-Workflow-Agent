@@ -305,6 +305,7 @@ if max_week >= 1:
     )
 else:
     selected_week = 1
+    st.sidebar.write(f"Business Week: {selected_week}")
 
 # Initialize sample data
 if not st.session_state.business_data:
