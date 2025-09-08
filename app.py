@@ -1,343 +1,262 @@
 import streamlit as st
-import random
-import numpy as np
 import pandas as pd
+import numpy as np
+import plotly.express as px
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import json
+import os
 
-st.set_page_config(page_title="Self-Optimizing Workflow Agent", layout="wide")
+# Set page config
+st.set_page_config(
+    page_title="Self-Optimizing Workflow Agent",
+    page_icon="🤖",
+    layout="wide"
+)
 
-# --------------------------
-# Session State Initialization
-# --------------------------
-if "run" not in st.session_state:
-    st.session_state.run = 0
-if "decision_log" not in st.session_state:
-    st.session_state.decision_log = []
+# Initialize session state
+if 'data' not in st.session_state:
+    st.session_state.data = []
+if 'current_run' not in st.session_state:
+    st.session_state.current_run = 1
 
-# --------------------------
-# Dashboard Header
-# --------------------------
-st.title("🤖 Self-Optimizing Workflow Orchestration Agent")
-st.write("Prototype simulation of autonomous multi-agent workflow optimization")
+# Title and description
+st.title("🤖 Self-Optimizing Workflow Agent")
+st.markdown("Monitor and optimize your workflow performance in real-time")
 
-# --------------------------
-# Control Buttons
-# --------------------------
-col1, col2, col3 = st.columns([1, 1, 8])
+# Sidebar for controls
+st.sidebar.header("Control Panel")
 
-with col1:
-    if st.button("🚀 Run Optimization Cycle"):
-        st.session_state.run += 1
-
-        # Simulate agent proposals
-        latency_after = random.randint(80, 200)  # ms
-        cost_after = random.randint(100, 500)    # $
-        error_after = round(random.uniform(0.5, 5), 2)  # %
-        throughput_after = random.randint(800, 1200)    # req/s
-
-        # Conflict resolution (pick trade-off strategy)
-        conflict_strategy = random.choice([
-            "Latency-Biased",
-            "Cost-Biased",
-            "Balanced",
-            "Error-Minimizing",
-            "Throughput-Maximizing"
-        ])
-
-        # Confidence weights (simulate negotiation influence)
-        weights = {
-            "Latency": np.random.uniform(0.2, 1.0),
-            "Cost": np.random.uniform(0.2, 1.0),
-            "Error": np.random.uniform(0.2, 1.0),
-            "Throughput": np.random.uniform(0.2, 1.0),
+# Add some sample data if none exists
+if not st.session_state.data:
+    sample_data = [
+        {
+            'run': 1,
+            'timestamp': datetime.now() - timedelta(hours=2),
+            'accuracy': 0.85,
+            'processing_time': 120,
+            'memory_usage': 75,
+            'status': 'completed'
+        },
+        {
+            'run': 2,
+            'timestamp': datetime.now() - timedelta(hours=1),
+            'accuracy': 0.88,
+            'processing_time': 115,
+            'memory_usage': 72,
+            'status': 'completed'
+        },
+        {
+            'run': 3,
+            'timestamp': datetime.now() - timedelta(minutes=30),
+            'accuracy': 0.91,
+            'processing_time': 108,
+            'memory_usage': 68,
+            'status': 'completed'
         }
-        total = sum(weights.values())
-        for k in weights:
-            weights[k] = round(weights[k] / total, 2)
+    ]
+    st.session_state.data = sample_data
+    st.session_state.current_run = len(sample_data)
 
-        # Log decision
-        decision_entry = {
-            "Run": st.session_state.run,
-            "Strategy": conflict_strategy,
-            "Latency_Proposal": latency_after,
-            "Cost_Proposal": cost_after,
-            "Error_Proposal": error_after,
-            "Throughput_Proposal": throughput_after,
-            "Final_Decision": f"Applied '{conflict_strategy}' trade-off",
-            "Latency_Weight": weights["Latency"],
-            "Cost_Weight": weights["Cost"],
-            "Error_Weight": weights["Error"],
-            "Throughput_Weight": weights["Throughput"],
-        }
-        st.session_state.decision_log.append(decision_entry)
-        st.rerun()
+# Calculate max_run safely
+max_run = len(st.session_state.data) if st.session_state.data else 1
 
-with col2:
-    if st.button("🔄 Reset Simulation"):
-        st.session_state.run = 0
-        st.session_state.decision_log = []
-        st.rerun()
-
-# --------------------------
-# Replay Mode
-# --------------------------
-st.subheader("🎬 Replay Mode: Step Through Runs")
-
-if st.session_state.decision_log:
-    max_run = len(st.session_state.decision_log)
-    run_selected = st.slider("Select Run", 1, max_run, max_run)
-
-    replay_df = pd.DataFrame(st.session_state.decision_log)
-    current_run = replay_df[replay_df["Run"] == run_selected].iloc[0]
-
-    st.markdown(f"**Showing Run {run_selected}:** Strategy → `{current_run['Strategy']}`, Decision → `{current_run['Final_Decision']}`")
-
-    # Metrics Snapshot in columns
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Latency", f"{current_run['Latency_Proposal']} ms")
-    with col2:
-        st.metric("Cost", f"${current_run['Cost_Proposal']}")
-    with col3:
-        st.metric("Error Rate", f"{current_run['Error_Proposal']}%")
-    with col4:
-        st.metric("Throughput", f"{current_run['Throughput_Proposal']} req/s")
-
-    # Two column layout for visualizations
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Sankey for reasoning
-        st.markdown("**Decision Flow Visualization**")
-        fig = go.Figure(go.Sankey(
-            node=dict(
-                pad=15,
-                thickness=20,
-                line=dict(color="black", width=0.5),
-                label=["Latency", "Cost", "Error", "Throughput", "Conflict Resolution", "Final Decision"],
-                color=["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DFE6E9"]
-            ),
-            link=dict(
-                source=[0, 1, 2, 3, 4],
-                target=[4, 4, 4, 4, 5],
-                value=[
-                    current_run["Latency_Weight"],
-                    current_run["Cost_Weight"],
-                    current_run["Error_Weight"],
-                    current_run["Throughput_Weight"],
-                    1
-                ],
-                color=["rgba(255,107,107,0.4)", "rgba(78,205,196,0.4)", 
-                       "rgba(69,183,209,0.4)", "rgba(150,206,180,0.4)", "rgba(223,230,233,0.4)"]
-            )
-        ))
-        fig.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0))
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Agent Weight Distribution
-        st.markdown("**Agent Weight Distribution**")
-        conf_df = pd.DataFrame({
-            "Agent": ["Latency", "Cost", "Error", "Throughput"],
-            "Weight": [
-                current_run["Latency_Weight"],
-                current_run["Cost_Weight"],
-                current_run["Error_Weight"],
-                current_run["Throughput_Weight"]
-            ]
-        })
-        
-        fig = go.Figure(go.Bar(
-            x=conf_df["Agent"],
-            y=conf_df["Weight"],
-            marker_color=["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4"],
-            text=conf_df["Weight"].round(2),
-            textposition='auto',
-        ))
-        fig.update_layout(
-            yaxis_title="Weight",
-            xaxis_title="Agent",
-            height=400,
-            margin=dict(l=0, r=0, t=20, b=0),
-            showlegend=False
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
+# Fix the slider issue with proper bounds checking
+st.sidebar.subheader("Run Selection")
+if max_run >= 1:
+    # Ensure min <= max for slider
+    min_run = 1
+    default_run = min(max_run, st.session_state.current_run)
+    run_selected = st.sidebar.slider(
+        "Select Run", 
+        min_value=min_run, 
+        max_value=max_run, 
+        value=default_run,
+        help=f"Choose from {min_run} to {max_run} available runs"
+    )
 else:
-    st.info("👆 Click 'Run Optimization Cycle' to start the simulation")
+    st.sidebar.warning("No data available")
+    run_selected = 1
 
-# --------------------------
-# Time-Series Evolution
-# --------------------------
-st.subheader("📈 Metrics Evolution Across Runs")
+# Add data button
+if st.sidebar.button("Add New Run"):
+    new_run = {
+        'run': max_run + 1,
+        'timestamp': datetime.now(),
+        'accuracy': np.random.uniform(0.80, 0.95),
+        'processing_time': np.random.randint(90, 150),
+        'memory_usage': np.random.randint(60, 80),
+        'status': 'completed'
+    }
+    st.session_state.data.append(new_run)
+    st.session_state.current_run = max_run + 1
+    st.rerun()
 
-if st.session_state.decision_log:
-    df = pd.DataFrame(st.session_state.decision_log)
+# Clear data button
+if st.sidebar.button("Clear All Data"):
+    st.session_state.data = []
+    st.session_state.current_run = 1
+    st.rerun()
+
+# Main content area
+if st.session_state.data:
+    df = pd.DataFrame(st.session_state.data)
     
-    # Create interactive Plotly time series
-    fig = go.Figure()
+    # Metrics row
+    col1, col2, col3, col4 = st.columns(4)
     
-    # Add traces for each metric
-    fig.add_trace(go.Scatter(
-        x=df["Run"], 
-        y=df["Latency_Proposal"], 
-        mode='lines+markers',
-        name='Latency (ms)',
-        line=dict(color='#FF6B6B', width=2),
-        marker=dict(size=8)
-    ))
+    latest_data = df.iloc[-1] if not df.empty else {}
     
-    fig.add_trace(go.Scatter(
-        x=df["Run"], 
-        y=df["Cost_Proposal"], 
-        mode='lines+markers',
-        name='Cost ($)',
-        line=dict(color='#4ECDC4', width=2),
-        marker=dict(size=8)
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=df["Run"], 
-        y=df["Error_Proposal"], 
-        mode='lines+markers',
-        name='Error Rate (%)',
-        line=dict(color='#45B7D1', width=2),
-        marker=dict(size=8)
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=df["Run"], 
-        y=df["Throughput_Proposal"], 
-        mode='lines+markers',
-        name='Throughput (req/s)',
-        line=dict(color='#96CEB4', width=2),
-        marker=dict(size=8)
-    ))
-    
-    fig.update_layout(
-        title="Workflow Metrics Over Time",
-        xaxis_title="Optimization Runs",
-        yaxis_title="Value",
-        hovermode='x unified',
-        height=500,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
+    with col1:
+        st.metric(
+            label="Current Accuracy",
+            value=f"{latest_data.get('accuracy', 0):.2%}",
+            delta=f"{(latest_data.get('accuracy', 0) - df.iloc[-2]['accuracy']):.2%}" if len(df) > 1 else None
         )
+    
+    with col2:
+        st.metric(
+            label="Processing Time",
+            value=f"{latest_data.get('processing_time', 0):.0f}s",
+            delta=f"{(latest_data.get('processing_time', 0) - df.iloc[-2]['processing_time']):.0f}s" if len(df) > 1 else None,
+            delta_color="inverse"
+        )
+    
+    with col3:
+        st.metric(
+            label="Memory Usage",
+            value=f"{latest_data.get('memory_usage', 0):.0f}%",
+            delta=f"{(latest_data.get('memory_usage', 0) - df.iloc[-2]['memory_usage']):.0f}%" if len(df) > 1 else None,
+            delta_color="inverse"
+        )
+    
+    with col4:
+        st.metric(
+            label="Total Runs",
+            value=len(df),
+            delta=1 if len(df) > 0 else 0
+        )
+    
+    # Charts section
+    st.subheader("Performance Trends")
+    
+    # Create two columns for charts
+    chart_col1, chart_col2 = st.columns(2)
+    
+    with chart_col1:
+        # Accuracy trend
+        fig_acc = px.line(
+            df, 
+            x='run', 
+            y='accuracy', 
+            title='Accuracy Over Time',
+            markers=True
+        )
+        fig_acc.update_layout(
+            yaxis=dict(tickformat='.0%'),
+            height=400
+        )
+        st.plotly_chart(fig_acc, use_container_width=True)
+    
+    with chart_col2:
+        # Processing time trend
+        fig_time = px.line(
+            df, 
+            x='run', 
+            y='processing_time', 
+            title='Processing Time Trend',
+            markers=True,
+            color_discrete_sequence=['#ff7f0e']
+        )
+        fig_time.update_layout(height=400)
+        st.plotly_chart(fig_time, use_container_width=True)
+    
+    # Memory usage chart
+    fig_memory = px.bar(
+        df, 
+        x='run', 
+        y='memory_usage', 
+        title='Memory Usage by Run',
+        color='memory_usage',
+        color_continuous_scale='Viridis'
+    )
+    fig_memory.update_layout(height=400)
+    st.plotly_chart(fig_memory, use_container_width=True)
+    
+    # Selected run details
+    st.subheader(f"Run {run_selected} Details")
+    
+    if run_selected <= len(df):
+        selected_run_data = df[df['run'] == run_selected].iloc[0]
+        
+        detail_col1, detail_col2 = st.columns(2)
+        
+        with detail_col1:
+            st.write("**Run Information:**")
+            st.write(f"- Run Number: {selected_run_data['run']}")
+            st.write(f"- Timestamp: {selected_run_data['timestamp']}")
+            st.write(f"- Status: {selected_run_data['status'].title()}")
+        
+        with detail_col2:
+            st.write("**Performance Metrics:**")
+            st.write(f"- Accuracy: {selected_run_data['accuracy']:.2%}")
+            st.write(f"- Processing Time: {selected_run_data['processing_time']:.0f} seconds")
+            st.write(f"- Memory Usage: {selected_run_data['memory_usage']:.0f}%")
+    
+    # Data table
+    st.subheader("All Runs Data")
+    st.dataframe(
+        df.style.format({
+            'accuracy': '{:.2%}',
+            'processing_time': '{:.0f}s',
+            'memory_usage': '{:.0f}%'
+        }),
+        use_container_width=True
     )
     
-    fig.update_xaxes(gridcolor='lightgray', showgrid=True)
-    fig.update_yaxes(gridcolor='lightgray', showgrid=True)
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # --------------------------
-    # Statistics Summary
-    # --------------------------
-    st.subheader("📊 Statistical Summary")
-    
+    # Export functionality
+    st.subheader("Export Data")
     col1, col2 = st.columns(2)
-    
-    with col1:
-        # Calculate statistics
-        stats_df = pd.DataFrame({
-            "Metric": ["Latency (ms)", "Cost ($)", "Error Rate (%)", "Throughput (req/s)"],
-            "Mean": [
-                df["Latency_Proposal"].mean().round(2),
-                df["Cost_Proposal"].mean().round(2),
-                df["Error_Proposal"].mean().round(2),
-                df["Throughput_Proposal"].mean().round(2)
-            ],
-            "Std Dev": [
-                df["Latency_Proposal"].std().round(2),
-                df["Cost_Proposal"].std().round(2),
-                df["Error_Proposal"].std().round(2),
-                df["Throughput_Proposal"].std().round(2)
-            ],
-            "Min": [
-                df["Latency_Proposal"].min(),
-                df["Cost_Proposal"].min(),
-                df["Error_Proposal"].min(),
-                df["Throughput_Proposal"].min()
-            ],
-            "Max": [
-                df["Latency_Proposal"].max(),
-                df["Cost_Proposal"].max(),
-                df["Error_Proposal"].max(),
-                df["Throughput_Proposal"].max()
-            ]
-        })
-        st.dataframe(stats_df, use_container_width=True, hide_index=True)
-    
-    with col2:
-        # Strategy distribution pie chart
-        strategy_counts = df["Strategy"].value_counts()
-        fig = go.Figure(go.Pie(
-            labels=strategy_counts.index,
-            values=strategy_counts.values,
-            hole=0.3,
-            marker_colors=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
-        ))
-        fig.update_layout(
-            title="Strategy Distribution",
-            height=300,
-            margin=dict(l=0, r=0, t=40, b=0)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # --------------------------
-    # Data Export
-    # --------------------------
-    st.subheader("💾 Export Data")
-    
-    col1, col2, col3 = st.columns([1, 1, 8])
     
     with col1:
         csv = df.to_csv(index=False)
         st.download_button(
-            label="📥 Download CSV",
+            label="Download CSV",
             data=csv,
-            file_name="workflow_optimization_log.csv",
+            file_name=f"workflow_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv"
         )
     
     with col2:
-        # Create a detailed report
-        report = f"""Workflow Optimization Report
-Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
-Total Runs: {len(df)}
-
-SUMMARY STATISTICS:
-{stats_df.to_string()}
-
-STRATEGY DISTRIBUTION:
-{strategy_counts.to_string()}
-
-DETAILED LOG:
-{df.to_string()}
-"""
+        json_data = df.to_json(orient='records', date_format='iso')
         st.download_button(
-            label="📄 Download Report",
-            data=report,
-            file_name="workflow_optimization_report.txt",
-            mime="text/plain"
+            label="Download JSON",
+            data=json_data,
+            file_name=f"workflow_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
         )
 
 else:
-    st.info("Run at least one optimization to see metrics evolution and statistics.")
+    # Empty state
+    st.info("No data available. Click 'Add New Run' in the sidebar to get started!")
+    
+    # Show a placeholder chart
+    st.subheader("Sample Dashboard Preview")
+    sample_x = list(range(1, 11))
+    sample_y = [0.8 + 0.02 * i + np.random.uniform(-0.01, 0.01) for i in sample_x]
+    
+    fig_preview = px.line(
+        x=sample_x, 
+        y=sample_y, 
+        title='Accuracy Improvement Over Time (Sample)',
+        labels={'x': 'Run', 'y': 'Accuracy'}
+    )
+    fig_preview.update_layout(
+        yaxis=dict(tickformat='.0%'),
+        height=400
+    )
+    st.plotly_chart(fig_preview, use_container_width=True)
 
-# --------------------------
 # Footer
-# --------------------------
 st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: gray;'>
-        <small>Self-Optimizing Workflow Agent v1.0 | Simulation Mode</small>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("Built with ❤️ using Streamlit")
