@@ -8,6 +8,7 @@ import json
 import random
 import time
 import matplotlib
+pip install matplotlib
 
 # Set page config
 st.set_page_config(
