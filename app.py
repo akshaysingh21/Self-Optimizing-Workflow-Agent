@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import json
 import random
 import time
+import matplotlib
 
 # Set page config
 st.set_page_config(
