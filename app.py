@@ -138,7 +138,7 @@ def normalize_dict_keys(d):
     def assess_function_performance(self, week_data, decisions):
         """Assess performance at each optimization function level"""
         function_results = {  
-            week_num = week_data['week'].iloc[0] if not week_data.empty else 0
+            week_num == week_data['week'].iloc[0] if not week_data.empty else 0
             normalized_results = normalize_dict_keys(function_results)
             st.session_state.function_level_metrics[int(week_num)] = normalized_results
             return normalized_results
