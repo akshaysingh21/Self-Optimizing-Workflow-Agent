@@ -296,7 +296,7 @@ if st.sidebar.button("🧠 Trigger AI Learning Cycle"):
 st.sidebar.header("📅 Simulation Controls")
 max_week = max([d['week'] for d in st.session_state.business_data]) if st.session_state.business_data else 1
 
-if max_week > 1:
+if max_week >= 1:
     selected_week = st.sidebar.slider(
         "Business Week", 
         min_value=1, 
