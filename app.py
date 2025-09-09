@@ -126,10 +126,23 @@ class AIOptimizationAgent:
                 })
         
         return optimizations
+
+def normalize_dict_keys(d):
+    if isinstance(d, dict):
+        return {int(k) if isinstance(k, np.integer) else k: normalize_dict_keys(v) for k, v in d.items()}
+    elif isinstance(d, list):
+        return [normalize_dict_keys(x) for x in d]
+    else:
+        return d
     
     def assess_function_performance(self, week_data, decisions):
         """Assess performance at each optimization function level"""
-        function_results = {}
+        function_results = {  
+            week_num = week_data['week'].iloc[0] if not week_data.empty else 0
+            normalized_results = normalize_dict_keys(function_results)
+            st.session_state.function_level_metrics[int(week_num)] = normalized_results
+            return normalized_results
+        }
         
         for func_name in OPTIMIZATION_FUNCTIONS.keys():
             func_decisions = [d for d in decisions if d.get('function_type') == func_name]
@@ -1126,20 +1139,13 @@ if st.session_state.business_data:
             help="Complete business requirements document"
         )
     
-    with brd_col3:
+    with brd_col3:     
         # Performance data export
         performance_data = {
             'current_week_data': current_week_data.to_dict('records'),
-              def normalize_dict_keys(d):
-            if isinstance(d, dict):
-                return {int(k) if isinstance(k, np.integer) else k: normalize_dict_keys(v) for k, v in d.items()}
-            elif isinstance(d, list):
-                return [normalize_dict_keys(x) for x in d]
-            else:
-                return d
             'optimization_history': st.session_state.optimization_history,
             'ai_decisions': st.session_state.ai_decisions,
-            'function_metrics': st.session_state.function_level_metrics,
+            'function_metrics': normalize_dict_keys(st.session_state.function_level_metrics),
             'generated_at': datetime.now().isoformat()
         }
         
