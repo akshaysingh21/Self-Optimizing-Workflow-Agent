@@ -1138,6 +1138,14 @@ if st.session_state.business_data:
         
         st.download_button(
             label="📊 Export All Data",
+            def normalize_dict_keys(d):
+            if isinstance(d, dict):
+                return {int(k) if isinstance(k, np.integer) else k: normalize_dict_keys(v) for k, v in d.items()}
+            elif isinstance(d, list):
+                return [normalize_dict_keys(x) for x in d]
+            else:
+                return d
+            
             data=json.dumps(performance_data, indent=2, default=str),
             file_name=f"ai_platform_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
