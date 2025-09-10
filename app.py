@@ -70,6 +70,14 @@ PRODUCTS = {
     'Winter Jackets': {'category': 'Apparel', 'shelf_life': 180, 'base_price': 89.99, 'seasonality': 2.0, 'ai_priority': 'medium'}
 }
 
+def normalize_dict_keys(d):
+    if isinstance(d, dict):
+        return {int(k) if isinstance(k, np.integer) else k: normalize_dict_keys(v) for k, v in d.items()}
+    elif isinstance(d, list):
+        return [normalize_dict_keys(x) for x in d]
+    else:
+        return d
+
 class AIOptimizationAgent:
     def __init__(self, strategy='balanced'):
         self.strategy_name = strategy
@@ -127,13 +135,6 @@ class AIOptimizationAgent:
         
         return optimizations
 
-def normalize_dict_keys(d):
-    if isinstance(d, dict):
-        return {int(k) if isinstance(k, np.integer) else k: normalize_dict_keys(v) for k, v in d.items()}
-    elif isinstance(d, list):
-        return [normalize_dict_keys(x) for x in d]
-    else:
-        return d
     
     def assess_function_performance(self, week_data, decisions):
         """Assess performance at each optimization function level"""
